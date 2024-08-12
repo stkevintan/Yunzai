@@ -9,7 +9,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
     return Bot.String(msg).replace(/base64:\/\/.*?"/g, "base64://...\"")
   }
 
-  makeButton(data, button) {
+  makeButton(button) {
     const msg = {
       text: button.text,
       pressed_text: button.clicked_text,
@@ -28,7 +28,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
     } else return false
 
     if (button.permission) {
-      if (button.permission == "admin") {
+      if (button.permission === "admin") {
         msg.permission = 1
       } else {
         msg.permission = 0
@@ -58,7 +58,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
       msg = [msg]
     const msgs = []
     for (let i of msg) {
-      if (typeof i != "object")
+      if (typeof i !== "object")
         i = { type: "text", text: i }
 
       if (i.file) {
@@ -104,7 +104,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
           i = i.data
           break
         default:
-          i = { type: "text", data: JSON.stringify(i) }
+          i = { type: "text", data: Bot.String(i) }
       }
       msgs.push(i)
     }
@@ -121,7 +121,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
       target_id: data.user_id,
       content,
     })
-    return { message_id: Date.now() }
+    return { message_id: Date.now().toString(36) }
   }
 
   async sendGroupMsg(data, msg) {
@@ -135,7 +135,7 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
       target_id: target[1],
       content,
     })
-    return { message_id: Date.now() }
+    return { message_id: Date.now().toString(36) }
   }
 
   pickFriend(id, user_id) {
@@ -263,15 +263,15 @@ Bot.adapter.push(new class GSUIDCoreAdapter {
           break
         case "node":
           data.message.push({ type: "node", data: i.data })
-          data.raw_message += `[合并转发：${JSON.stringify(i.data)}]`
+          data.raw_message += `[合并转发：${Bot.String(i.data)}]`
           break
         default:
           data.message.push(i)
-          data.raw_message += JSON.stringify(i)
+          data.raw_message += Bot.String(i)
       }
     }
 
-    if (raw.user_type == "direct") {
+    if (raw.user_type === "direct") {
       data.message_type = "private"
       Bot.makeLog("info", `好友消息：${data.raw_message}`, `${data.self_id} <= ${data.user_id}`)
     } else {

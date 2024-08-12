@@ -9,11 +9,22 @@ log_object: true
 url: http://localhost:2536
 # 服务器端口
 port: 2536
+# 服务器缺省跳转地址
+redirect: https://github.com/TimeRainStarSky/Yunzai
 
 # 自动更新时间
 update_time: 1440
 # 自动重启时间
 restart_time: 0
+# 定时更新cron表达式
+update_cron:
+# 定时重启cron表达式
+restart_cron:
+# 定时关机cron表达式
+stop_cron:
+# 定时开机cron表达式
+start_cron:
+
 # 上线推送通知的冷却时间
 online_msg_exp: 1440
 # 文件保存时间

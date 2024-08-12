@@ -19,8 +19,8 @@
     "chalk": "^5.3.0",
     "chokidar": "^3.6.0",
     "express": "^4.19.2",
-    "file-type": "^19.0.0",
-    "https-proxy-agent": "7.0.4",
+    "file-type": "^19.4.0",
+    "https-proxy-agent": "7.0.5",
     "image-size": "^1.1.1",
     "level": "^8.0.1",
     "lodash": "^4.17.21",
@@ -30,25 +30,30 @@
     "node-fetch": "link:lib/modules/node-fetch",
     "node-schedule": "^2.1.1",
     "oicq": "link:lib/modules/oicq",
-    "pm2": "^5.3.1",
+    "pm2": "^5.4.2",
     "puppeteer": "*",
-    "redis": "^4.6.14",
+    "redis": "^4.7.0",
     "sequelize": "^6.37.3",
     "sqlite3": "5.1.6",
     "strip-ansi": "^7.1.0",
     "ulid": "^2.3.0",
-    "ws": "^8.17.0",
-    "yaml": "^2.4.2"
+    "ws": "^8.18.0",
+    "yaml": "^2.5.0"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.1.1"
+    "eslint-plugin-promise": "^6.6.0"
   },
   "imports": {
     "#miao": "./plugins/miao-plugin/components/index.js",
     "#miao.models": "./plugins/miao-plugin/models/index.js"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "log4js@6.9.1": "lib/modules/log4js.patch"
+    }
   }
 }

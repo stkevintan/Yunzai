@@ -6,20 +6,30 @@ Bot.adapter.push(new class ComWeChatAdapter {
     this.id = "WeChat"
     this.name = "ComWeChat"
     this.path = this.name
+    this.echo = {}
+    this.timeout = 60000
   }
 
   makeLog(msg) {
     return Bot.String(msg).replace(/(base64:\/\/|"type":"data","data":").*?"/g, '$1..."')
   }
 
-  sendApi(ws, action, params = {}) {
+  sendApi(data, ws, action, params = {}) {
     const echo = ulid()
-    ws.sendMsg({ action, params, echo })
-    return new Promise(resolve => Bot.once(echo, data => resolve(
-      data.data ? new Proxy(data, {
-        get: (target, prop, receiver) => target.data[prop] ?? target[prop],
-      }) : data
-    )))
+    const request = { action, params, echo }
+    ws.sendMsg(request)
+    const error = Error()
+    return new Promise((resolve, reject) =>
+      this.echo[echo] = {
+        request, resolve, reject, error,
+        timeout: setTimeout(() => {
+          reject(Object.assign(error, request, { timeout: this.timeout }))
+          delete this.echo[echo]
+          Bot.makeLog("error", ["请求超时", request], data.self_id)
+          ws.terminate()
+        }, this.timeout),
+      }
+    )
   }
 
   async uploadFile(data, file) {
@@ -46,7 +56,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
       msg = [msg]
     const msgs = []
     for (let i of msg) {
-      if (typeof i != "object")
+      if (typeof i !== "object")
         i = { type: "text", data: { text: i }}
       else if (!i.data)
         i = { type: i.type, data: { ...i, type: undefined }}
@@ -65,7 +75,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
           i.type = "file"
           break
         case "at":
-          if (i.data.qq == "all")
+          if (i.data.qq === "all")
             i = { type: "mention_all", data: {}}
           else
             i = { type: "mention", data: { user_id: i.data.qq }}
@@ -80,7 +90,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
           i = i.data
           break
         default:
-          i = { type: "text", data: { text: JSON.stringify(i) }}
+          i = { type: "text", data: { text: Bot.String(i) }}
       }
       msgs.push(i)
     }
@@ -112,7 +122,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
     for (const i of (await data.bot.sendApi("get_friend_list")).data)
       array.push({
         ...i,
-        nickname: i.user_remark == "null" ? i.user_displayname || i.user_name : i.user_remark,
+        nickname: i.user_remark === "null" ? i.user_displayname || i.user_name : i.user_remark,
       })
     return array
   }
@@ -242,7 +252,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
     Bot[data.self_id] = {
       adapter: this,
       ws: ws,
-      sendApi: (action, params) => this.sendApi(ws, action, params),
+      sendApi: (action, params) => this.sendApi(data, ws, action, params),
       stat: { ...data.status, start_time: data.time },
 
       info: {},
@@ -270,9 +280,9 @@ Bot.adapter.push(new class ComWeChatAdapter {
     if (!Bot.uin.includes(data.self_id))
       Bot.uin.push(data.self_id)
 
-    data.bot.info = (await data.bot.sendApi("get_self_info")).data
+    data.bot.info = (await data.bot.sendApi("get_self_info").catch(i => i.error)).data
     data.bot.version = {
-      ...(await data.bot.sendApi("get_version")).data,
+      ...(await data.bot.sendApi("get_version").catch(i => i.error)).data,
       id: this.id,
       name: this.name,
     }
@@ -433,7 +443,7 @@ Bot.adapter.push(new class ComWeChatAdapter {
     }
 
     if (data.type) {
-      if (data.type != "meta" && !Bot.uin.includes(data.self_id)) {
+      if (data.type !== "meta" && !Bot.uin.includes(data.self_id)) {
         Bot.makeLog("warn", `找不到对应Bot，忽略消息：${logger.magenta(data.raw)}`, data.self_id)
         return false
       }
@@ -455,8 +465,19 @@ Bot.adapter.push(new class ComWeChatAdapter {
         default:
           Bot.makeLog("warn", `未知消息：${logger.magenta(data.raw)}`, data.self_id)
       }
-    } else if (data.echo) {
-      Bot.emit(data.echo, data)
+    } else if (data.echo && this.echo[data.echo]) {
+      if (data.retcode !== 0)
+        this.echo[data.echo].reject(Object.assign(
+          this.echo[data.echo].error,
+          this.echo[data.echo].request,
+          { error: data },
+        ))
+      else
+        this.echo[data.echo].resolve(data.data ? new Proxy(data, {
+          get: (target, prop) => target.data[prop] ?? target[prop],
+        }) : data)
+      clearTimeout(this.echo[data.echo].timeout)
+      delete this.echo[data.echo]
     } else {
       Bot.makeLog("warn", `未知消息：${logger.magenta(data.raw)}`, data.self_id)
     }
